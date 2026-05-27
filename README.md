@@ -70,36 +70,34 @@
     ![执行SQL](https://github.com/user-attachments/assets/be10c3a0-a862-467a-8114-d5c5c8e48d2a)
 
 ```sql
--- 创建已发布网站表
-CREATE TABLE sites (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-name TEXT NOT NULL,
-url TEXT NOT NULL,
-logo TEXT,
-"desc" TEXT,
-catelog TEXT NOT NULL,
-status TEXT,
-sort_order INTEGER NOT NULL DEFAULT 9999,
-create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+-- 网站配置表
+CREATE TABLE IF NOT EXISTS sites (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  url TEXT NOT NULL,
+  logo TEXT,
+  desc TEXT,
+  catelog TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 9999,
+  create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 创建待审核网站表
-CREATE TABLE pending_sites (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-name TEXT NOT NULL,
-url TEXT NOT NULL,
-logo TEXT,
-"desc" TEXT,
-catelog TEXT NOT NULL,
-status TEXT,
-create_time DATETIME DEFAULT CURRENT_TIMESTAMP
+-- 待审核网站表
+CREATE TABLE IF NOT EXISTS pending_sites (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  url TEXT NOT NULL,
+  logo TEXT,
+  desc TEXT,
+  catelog TEXT NOT NULL,
+  create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 创建分类排序表
-CREATE TABLE category_orders (
-catelog TEXT PRIMARY KEY,
-sort_order INTEGER NOT NULL DEFAULT 9999
+-- 分类排序表
+CREATE TABLE IF NOT EXISTS category_orders (
+  catelog TEXT PRIMARY KEY,
+  sort_order INTEGER NOT NULL DEFAULT 9999
 );
 ```
 > **提示**: 使用 SQL 是最快捷的方式。如果你想手动建表，请确保字段名、类型与上述 SQL 一致。
