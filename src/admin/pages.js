@@ -1,7 +1,7 @@
 import { escapeHTML } from '../utils/html.js';
 import adminHtml from '../templates/admin.html';
 import adminCss from '../templates/admin.css';
-import adminJsText from '../templates/admin.js';
+import adminJsText from '../templates/admin.js.txt';
 import loginHtml from '../templates/login.html';
 
 export function renderAdminPage() {
