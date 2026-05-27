@@ -1,0 +1,20 @@
+name = "nav"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# 静态资源规则
+[[rules]]
+globs = ["**/*.html", "**/*.css", "**/*.txt"]
+type = "Text"
+fallthrough = true
+
+# D1 数据库绑定
+[[d1_databases]]
+binding = "NAV_DB"
+database_name = "book"
+database_id = "YOUR_D1_DATABASE_ID"
+
+# KV 命名空间绑定
+[[kv_namespaces]]
+binding = "NAV_AUTH"
+id = "YOUR_KV_NAMESPACE_ID"
