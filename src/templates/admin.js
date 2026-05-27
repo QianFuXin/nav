@@ -395,6 +395,29 @@ function updatePaginationButtons() {
 prevPageBtn.addEventListener('click', () => { if (currentPage > 1) fetchConfigs(currentPage - 1); });
 nextPageBtn.addEventListener('click', () => { if (currentPage < Math.ceil(totalItems / pageSize)) fetchConfigs(currentPage + 1); });
 
+// 自动获取 favicon
+async function fetchFavicon(url) {
+  try {
+    const response = await fetch(`/api/favicon?url=${encodeURIComponent(url)}`);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.favicon) {
+        addLogo.value = data.favicon;
+      }
+    }
+  } catch (error) {
+    console.error('获取 favicon 失败:', error);
+  }
+}
+
+// URL 输入框失焦时自动获取 favicon
+addUrl.addEventListener('blur', () => {
+  const url = addUrl.value.trim();
+  if (url && !addLogo.value) {
+    fetchFavicon(url);
+  }
+});
+
 addBtn.addEventListener('click', () => {
   const name = addName.value;
   const url = addUrl.value;
