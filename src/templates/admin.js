@@ -114,6 +114,12 @@ document.body.appendChild(editModal);
 const modalClose = editModal.querySelector('.modal-close');
 modalClose.addEventListener('click', () => { editModal.style.display = 'none'; });
 
+document.getElementById('editUrl').addEventListener('blur', function() {
+  const url = this.value.trim();
+  const logoInput = document.getElementById('editLogo');
+  if (url && !logoInput.value) fetchFavicon(url, logoInput);
+});
+
 const editForm = document.getElementById('editForm');
 editForm.addEventListener('submit', function(e) {
   e.preventDefault();
@@ -396,13 +402,13 @@ prevPageBtn.addEventListener('click', () => { if (currentPage > 1) fetchConfigs(
 nextPageBtn.addEventListener('click', () => { if (currentPage < Math.ceil(totalItems / pageSize)) fetchConfigs(currentPage + 1); });
 
 // 自动获取 favicon
-async function fetchFavicon(url) {
+async function fetchFavicon(url, targetInput) {
   try {
     const response = await fetch(`/api/favicon?url=${encodeURIComponent(url)}`);
     if (response.ok) {
       const data = await response.json();
       if (data.favicon) {
-        addLogo.value = data.favicon;
+        (targetInput || addLogo).value = data.favicon;
       }
     }
   } catch (error) {
