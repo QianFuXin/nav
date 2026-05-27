@@ -1,4 +1,5 @@
 name = "nav"
+account_id = "d8561b9505c7a42ce9d137119ea43cf6"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
 
@@ -12,9 +13,9 @@ fallthrough = true
 [[d1_databases]]
 binding = "NAV_DB"
 database_name = "book"
-database_id = "YOUR_D1_DATABASE_ID"
+database_id = "96634e2e-4639-42e6-a6a8-b0395b3f15bc"
 
 # KV 命名空间绑定
 [[kv_namespaces]]
 binding = "NAV_AUTH"
-id = "YOUR_KV_NAMESPACE_ID"
+id = "3138f9b276c54a0aa3db70b55f195808"

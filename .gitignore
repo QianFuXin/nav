@@ -1,1 +1,22 @@
+node_modules/
 .wrangler/
+.dev.vars
+wrangler.toml
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Dev docs
+TASK.md
+FIX_TASKS.md
+TEST_REPORT.md
+PROJECT_ANALYSIS.md
+COMPREHENSIVE_REVIEW.md
