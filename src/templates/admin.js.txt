@@ -10,9 +10,10 @@ const pendingNextPageBtn = document.getElementById('pendingNextPage');
 const pendingCurrentPageSpan = document.getElementById('pendingCurrentPage');
 const pendingTotalPagesSpan = document.getElementById('pendingTotalPages');
 
-const messageDiv = document.getElementById('message');
+const toastContainer = document.getElementById('toastContainer');
 const categoryTableBody = document.getElementById('categoryTableBody');
 const refreshCategoriesBtn = document.getElementById('refreshCategories');
+const searchInput = document.getElementById('searchInput');
 
 var escapeHTML = function(value) {
   if (value === null || value === undefined) return '';
@@ -63,14 +64,6 @@ if (refreshCategoriesBtn) {
   refreshCategoriesBtn.addEventListener('click', () => fetchCategories());
 }
 
-// 添加搜索框
-const searchInput = document.createElement('input');
-searchInput.type = 'text';
-searchInput.placeholder = '搜索书签(名称，URL，分类)';
-searchInput.id = 'searchInput';
-searchInput.style.marginBottom = '10px';
-document.querySelector('.add-new').parentNode.insertBefore(searchInput, document.querySelector('.add-new'));
-
 let currentPage = 1;
 let pageSize = 10;
 let totalItems = 0;
@@ -83,36 +76,20 @@ let pendingTotalItems = 0;
 let allPendingConfigs = [];
 let categoriesData = [];
 
-// 创建编辑模态框
-const editModal = document.createElement('div');
-editModal.className = 'modal';
-editModal.style.display = 'none';
-editModal.innerHTML = `
-  <div class="modal-content">
-    <span class="modal-close">&times;</span>
-    <h2>编辑站点</h2>
-    <form id="editForm">
-      <input type="hidden" id="editId">
-      <label for="editName">名称:</label>
-      <input type="text" id="editName" required><br>
-      <label for="editUrl">URL:</label>
-      <input type="text" id="editUrl" required><br>
-      <label for="editLogo">Logo(可选):</label>
-      <input type="text" id="editLogo"><br>
-      <label for="editDesc">描述(可选):</label>
-      <input type="text" id="editDesc"><br>
-      <label for="editCatelog">分类:</label>
-      <input type="text" id="editCatelog" required><br>
-      <label for="editSortOrder">排序:</label>
-      <input type="number" id="editSortOrder"><br>
-      <button type="submit">保存</button>
-    </form>
-  </div>
-`;
-document.body.appendChild(editModal);
+const editModal = document.getElementById('editModal');
+const modalCloseBtn = editModal.querySelector('.modal-close');
+const modalCloseBtnAlt = editModal.querySelector('.modal-close-btn');
 
-const modalClose = editModal.querySelector('.modal-close');
-modalClose.addEventListener('click', () => { editModal.style.display = 'none'; });
+function closeModal() {
+  editModal.style.display = 'none';
+}
+
+if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeModal);
+if (modalCloseBtnAlt) modalCloseBtnAlt.addEventListener('click', closeModal);
+
+editModal.addEventListener('click', function(e) {
+  if (e.target === editModal) closeModal();
+});
 
 document.getElementById('editUrl').addEventListener('blur', function() {
   const url = this.value.trim();
@@ -141,13 +118,13 @@ editForm.addEventListener('submit', function(e) {
   }).then(res => res.json())
     .then(data => {
       if (data.code === 200) {
-        showMessage('修改成功', 'success');
+        showToast('修改成功', 'success');
         fetchConfigs();
-        editModal.style.display = 'none';
+        closeModal();
       } else {
-        showMessage(data.message, 'error');
+        showToast(data.message, 'error');
       }
-    }).catch(() => showMessage('网络错误', 'error'));
+    }).catch(() => showToast('网络错误', 'error'));
 });
 
 function fetchConfigs(page = currentPage, keyword = currentSearchKeyword) {
@@ -165,19 +142,18 @@ function fetchConfigs(page = currentPage, keyword = currentSearchKeyword) {
         renderConfig(allConfigs);
         updatePaginationButtons();
       } else {
-        showMessage(data.message, 'error');
+        showToast(data.message, 'error');
       }
-    }).catch(() => showMessage('网络错误', 'error'));
+    }).catch(() => showToast('网络错误', 'error'));
 }
 
 function renderConfig(configs) {
   configTableBody.innerHTML = '';
   if (configs.length === 0) {
-    configTableBody.innerHTML = '<tr><td colspan="8">没有配置数据</td></tr>';
+    configTableBody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-text">暂无书签数据</div></div></td></tr>';
     return;
   }
 
-  // Optimization 2: group by category
   const grouped = new Map();
   configs.forEach(config => {
     const cat = config.catelog || '未分类';
@@ -187,7 +163,8 @@ function renderConfig(configs) {
 
   grouped.forEach((items, cat) => {
     const headerRow = document.createElement('tr');
-    headerRow.innerHTML = `<td colspan="8" style="background:#e9ecef;font-weight:600;color:#343a40;">📂 ${escapeHTML(cat)} (${items.length})</td>`;
+    headerRow.className = 'category-header';
+    headerRow.innerHTML = `<td colspan="8">📂 ${escapeHTML(cat)} (${items.length})</td>`;
     configTableBody.appendChild(headerRow);
 
     items.forEach(config => {
@@ -196,27 +173,30 @@ function renderConfig(configs) {
       const normalizedUrl = normalizeUrl(config.url);
       const displayUrl = config.url ? escapeHTML(config.url) : '未提供';
       const urlCell = normalizedUrl
-        ? `<a href="${escapeHTML(normalizedUrl)}" target="_blank" rel="noopener noreferrer">${escapeHTML(normalizedUrl)}</a>`
-        : displayUrl;
+        ? `<div class="cell-url"><a href="${escapeHTML(normalizedUrl)}" target="_blank" rel="noopener noreferrer">${escapeHTML(config.url || normalizedUrl)}</a></div>`
+        : `<span style="color:var(--color-text-muted)">${displayUrl}</span>`;
       const normalizedLogo = normalizeUrl(config.logo);
       const logoCell = normalizedLogo
-        ? `<img src="${escapeHTML(normalizedLogo)}" alt="${safeName}" style="width:30px;" />`
-        : 'N/A';
-      const descCell = config.desc ? escapeHTML(config.desc) : 'N/A';
-      const catelogCell = escapeHTML(config.catelog || '');
+        ? `<div class="cell-logo"><img src="${escapeHTML(normalizedLogo)}" alt="${safeName}" /></div>`
+        : '<span style="color:var(--color-text-muted)">-</span>';
+      const descCell = config.desc
+        ? `<div class="cell-desc" title="${escapeHTML(config.desc)}">${escapeHTML(config.desc)}</div>`
+        : '<span style="color:var(--color-text-muted)">-</span>';
+      const catelogCell = `<span class="cell-category">${escapeHTML(config.catelog || '未分类')}</span>`;
       const sortValue = config.sort_order === 9999 || config.sort_order === null || config.sort_order === undefined
-        ? '默认' : escapeHTML(config.sort_order);
+        ? '<span style="color:var(--color-text-muted)">默认</span>'
+        : `<span class="cell-sort">${escapeHTML(config.sort_order)}</span>`;
       row.innerHTML = `
-        <td>${config.id}</td>
-        <td>${safeName}</td>
+        <td class="cell-id">${config.id}</td>
+        <td><strong>${safeName}</strong></td>
         <td>${urlCell}</td>
         <td>${logoCell}</td>
         <td>${descCell}</td>
         <td>${catelogCell}</td>
         <td>${sortValue}</td>
         <td class="actions">
-          <button class="edit-btn" data-id="${config.id}">编辑</button>
-          <button class="del-btn" data-id="${config.id}">删除</button>
+          <button class="edit-btn btn btn-sm" data-id="${config.id}">编辑</button>
+          <button class="del-btn btn btn-sm" data-id="${config.id}">删除</button>
         </td>
       `;
       configTableBody.appendChild(row);
@@ -236,7 +216,7 @@ function bindActionEvents() {
 
 function fetchCategories() {
   if (!categoryTableBody) return;
-  categoryTableBody.innerHTML = '<tr><td colspan="4">加载中...</td></tr>';
+  categoryTableBody.innerHTML = '<tr><td colspan="4"><div class="loading-cell"><div class="loading-spinner"></div>加载中...</div></td></tr>';
   fetch('/api/categories')
     .then(res => res.json())
     .then(data => {
@@ -244,12 +224,12 @@ function fetchCategories() {
         categoriesData = data.data || [];
         renderCategories(categoriesData);
       } else {
-        showMessage(data.message || '加载分类失败', 'error');
-        categoryTableBody.innerHTML = '<tr><td colspan="4">加载失败</td></tr>';
+        showToast(data.message || '加载分类失败', 'error');
+        categoryTableBody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><div class="empty-state-text">加载失败</div></div></td></tr>';
       }
     }).catch(() => {
-      showMessage('网络错误', 'error');
-      categoryTableBody.innerHTML = '<tr><td colspan="4">加载失败</td></tr>';
+      showToast('网络错误', 'error');
+      categoryTableBody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><div class="empty-state-text">加载失败</div></div></td></tr>';
     });
 }
 
@@ -257,7 +237,7 @@ function renderCategories(categories) {
   if (!categoryTableBody) return;
   categoryTableBody.innerHTML = '';
   if (!categories || categories.length === 0) {
-    categoryTableBody.innerHTML = '<tr><td colspan="4">暂无分类数据</td></tr>';
+    categoryTableBody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><div class="empty-state-icon">📁</div><div class="empty-state-text">暂无分类数据</div></div></td></tr>';
     return;
   }
 
@@ -265,11 +245,11 @@ function renderCategories(categories) {
     const row = document.createElement('tr');
 
     const nameCell = document.createElement('td');
-    nameCell.textContent = item.catelog;
+    nameCell.innerHTML = `<strong>${escapeHTML(item.catelog)}</strong>`;
     row.appendChild(nameCell);
 
     const countCell = document.createElement('td');
-    countCell.textContent = item.site_count;
+    countCell.innerHTML = `<span class="cell-sort">${item.site_count}</span>`;
     row.appendChild(countCell);
 
     const sortCell = document.createElement('td');
@@ -282,11 +262,11 @@ function renderCategories(categories) {
     sortCell.appendChild(input);
 
     const hint = document.createElement('small');
-    hint.textContent = '当前默认值：' + item.sort_order;
+    hint.textContent = '默认值：' + item.sort_order;
     hint.style.display = 'block';
-    hint.style.marginTop = '4px';
+    hint.style.marginTop = '6px';
     hint.style.fontSize = '0.75rem';
-    hint.style.color = '#6c757d';
+    hint.style.color = 'var(--color-text-muted)';
     sortCell.appendChild(hint);
     row.appendChild(sortCell);
 
@@ -294,13 +274,13 @@ function renderCategories(categories) {
     actionCell.className = 'category-actions';
 
     const saveBtn = document.createElement('button');
-    saveBtn.className = 'category-save-btn';
+    saveBtn.className = 'category-save-btn btn btn-primary btn-sm';
     saveBtn.textContent = '保存';
     saveBtn.setAttribute('data-category', item.catelog);
     actionCell.appendChild(saveBtn);
 
     const resetBtn = document.createElement('button');
-    resetBtn.className = 'category-reset-btn';
+    resetBtn.className = 'category-reset-btn btn btn-secondary btn-sm';
     resetBtn.textContent = '重置';
     resetBtn.setAttribute('data-category', item.catelog);
     if (!item.explicit) resetBtn.disabled = true;
@@ -321,18 +301,18 @@ function bindCategoryEvents() {
       const input = this.closest('tr').querySelector('.category-sort-input');
       if (!category || !input) return;
       const rawValue = input.value.trim();
-      if (rawValue === '') { showMessage('请输入排序值，或使用"重置"恢复默认。', 'error'); return; }
+      if (rawValue === '') { showToast('请输入排序值，或使用"重置"恢复默认。', 'error'); return; }
       const sortValue = Number(rawValue);
-      if (!Number.isFinite(sortValue)) { showMessage('排序值必须为数字', 'error'); return; }
+      if (!Number.isFinite(sortValue)) { showToast('排序值必须为数字', 'error'); return; }
       fetch('/api/categories/' + encodeURIComponent(category), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sort_order: sortValue })
       }).then(res => res.json())
         .then(data => {
-          if (data.code === 200) { showMessage('分类排序已更新', 'success'); fetchCategories(); }
-          else { showMessage(data.message || '更新失败', 'error'); }
-        }).catch(() => showMessage('网络错误', 'error'));
+          if (data.code === 200) { showToast('分类排序已更新', 'success'); fetchCategories(); }
+          else { showToast(data.message || '更新失败', 'error'); }
+        }).catch(() => showToast('网络错误', 'error'));
     });
   });
 
@@ -348,20 +328,19 @@ function bindCategoryEvents() {
         body: JSON.stringify({ reset: true })
       }).then(res => res.json())
         .then(data => {
-          if (data.code === 200) { showMessage('已重置分类排序', 'success'); fetchCategories(); }
-          else { showMessage(data.message || '重置失败', 'error'); }
-        }).catch(() => showMessage('网络错误', 'error'));
+          if (data.code === 200) { showToast('已重置分类排序', 'success'); fetchCategories(); }
+          else { showToast(data.message || '重置失败', 'error'); }
+        }).catch(() => showToast('网络错误', 'error'));
     });
   });
 }
 
-// Optimization 1: use single query endpoint for edit
 function handleEdit(id) {
   fetch(`/api/config/${id}`)
     .then(res => res.json())
     .then(data => {
       if (data.code !== 200 || !data.data) {
-        showMessage('找不到要编辑的数据', 'error');
+        showToast('找不到要编辑的数据', 'error');
         return;
       }
       const configToEdit = data.data;
@@ -373,24 +352,32 @@ function handleEdit(id) {
       document.getElementById('editCatelog').value = configToEdit.catelog;
       document.getElementById('editSortOrder').value = configToEdit.sort_order === 9999 ? '' : configToEdit.sort_order;
       editModal.style.display = 'block';
-    }).catch(() => showMessage('网络错误', 'error'));
+    }).catch(() => showToast('网络错误', 'error'));
 }
 
 function handleDelete(id) {
-  if (!confirm('确认删除？')) return;
+  if (!confirm('确认删除此书签？')) return;
   fetch(`/api/config/${id}`, { method: 'DELETE' })
     .then(res => res.json())
     .then(data => {
-      if (data.code === 200) { showMessage('删除成功', 'success'); fetchConfigs(); }
-      else { showMessage(data.message, 'error'); }
-    }).catch(() => showMessage('网络错误', 'error'));
+      if (data.code === 200) { showToast('删除成功', 'success'); fetchConfigs(); }
+      else { showToast(data.message, 'error'); }
+    }).catch(() => showToast('网络错误', 'error'));
 }
 
-function showMessage(message, type) {
-  messageDiv.innerText = message;
-  messageDiv.className = type;
-  messageDiv.style.display = 'block';
-  setTimeout(() => { messageDiv.style.display = 'none'; }, 3000);
+function showToast(message, type) {
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  const icon = type === 'success' ? '✓' : '✕';
+  toast.innerHTML = `<span class="toast-icon">${icon}</span><span>${escapeHTML(message)}</span>`;
+  toastContainer.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(24px)';
+    toast.style.transition = 'all 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
 }
 
 function updatePaginationButtons() {
@@ -401,7 +388,6 @@ function updatePaginationButtons() {
 prevPageBtn.addEventListener('click', () => { if (currentPage > 1) fetchConfigs(currentPage - 1); });
 nextPageBtn.addEventListener('click', () => { if (currentPage < Math.ceil(totalItems / pageSize)) fetchConfigs(currentPage + 1); });
 
-// 自动获取 favicon
 async function fetchFavicon(url, targetInput) {
   try {
     const response = await fetch(`/api/favicon?url=${encodeURIComponent(url)}`);
@@ -416,7 +402,6 @@ async function fetchFavicon(url, targetInput) {
   }
 }
 
-// URL 输入框失焦时自动获取 favicon
 addUrl.addEventListener('blur', () => {
   const url = addUrl.value.trim();
   if (url && !addLogo.value) {
@@ -431,7 +416,7 @@ addBtn.addEventListener('click', () => {
   const desc = addDesc.value;
   const catelog = addCatelog.value;
   const sort_order = addSortOrder.value;
-  if (!name || !url || !catelog) { showMessage('名称,URL,分类 必填', 'error'); return; }
+  if (!name || !url || !catelog) { showToast('名称、URL、分类为必填项', 'error'); return; }
   const payload = { name: name.trim(), url: url.trim(), logo: logo.trim(), desc: desc.trim(), catelog: catelog.trim() };
   if (sort_order !== '') payload.sort_order = Number(sort_order);
   fetch('/api/config', {
@@ -441,12 +426,12 @@ addBtn.addEventListener('click', () => {
   }).then(res => res.json())
     .then(data => {
       if (data.code === 201) {
-        showMessage('添加成功', 'success');
+        showToast('添加成功', 'success');
         addName.value = ''; addUrl.value = ''; addLogo.value = '';
         addDesc.value = ''; addCatelog.value = ''; addSortOrder.value = '';
         fetchConfigs();
-      } else { showMessage(data.message, 'error'); }
-    }).catch(() => showMessage('网络错误', 'error'));
+      } else { showToast(data.message, 'error'); }
+    }).catch(() => showToast('网络错误', 'error'));
 });
 
 importBtn.addEventListener('click', () => { importFile.click(); });
@@ -463,10 +448,10 @@ importFile.addEventListener('change', function(e) {
         body: JSON.stringify(jsonData)
       }).then(res => res.json())
         .then(data => {
-          if (data.code === 201) { showMessage('导入成功', 'success'); fetchConfigs(); }
-          else { showMessage(data.message, 'error'); }
-        }).catch(() => showMessage('网络错误', 'error'));
-    } catch (error) { showMessage('JSON格式不正确', 'error'); }
+          if (data.code === 201) { showToast('导入成功', 'success'); fetchConfigs(); }
+          else { showToast(data.message, 'error'); }
+        }).catch(() => showToast('网络错误', 'error'));
+    } catch (error) { showToast('JSON格式不正确', 'error'); }
   };
   reader.readAsText(file);
 });
@@ -480,14 +465,17 @@ exportBtn.addEventListener('click', () => {
       a.href = url; a.download = 'config.json';
       document.body.appendChild(a); a.click();
       window.URL.revokeObjectURL(url); document.body.removeChild(a);
-    }).catch(() => showMessage('网络错误', 'error'));
+    }).catch(() => showToast('网络错误', 'error'));
 });
 
-// 搜索功能
+let searchTimeout;
 searchInput.addEventListener('input', () => {
-  currentSearchKeyword = searchInput.value.trim();
-  currentPage = 1;
-  fetchConfigs(currentPage, currentSearchKeyword);
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    currentSearchKeyword = searchInput.value.trim();
+    currentPage = 1;
+    fetchConfigs(currentPage, currentSearchKeyword);
+  }, 300);
 });
 
 function fetchPendingConfigs(page = pendingCurrentPage) {
@@ -502,14 +490,14 @@ function fetchPendingConfigs(page = pendingCurrentPage) {
         allPendingConfigs = data.data;
         renderPendingConfig(allPendingConfigs);
         updatePendingPaginationButtons();
-      } else { showMessage(data.message, 'error'); }
-    }).catch(() => showMessage('网络错误', 'error'));
+      } else { showToast(data.message, 'error'); }
+    }).catch(() => showToast('网络错误', 'error'));
 }
 
 function renderPendingConfig(configs) {
   pendingTableBody.innerHTML = '';
   if (configs.length === 0) {
-    pendingTableBody.innerHTML = '<tr><td colspan="7">没有待审核数据</td></tr>';
+    pendingTableBody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon">✅</div><div class="empty-state-text">没有待审核的投稿</div></div></td></tr>';
     return;
   }
   configs.forEach(config => {
@@ -517,24 +505,26 @@ function renderPendingConfig(configs) {
     const safeName = escapeHTML(config.name || '');
     const normalizedUrl = normalizeUrl(config.url);
     const urlCell = normalizedUrl
-      ? `<a href="${escapeHTML(normalizedUrl)}" target="_blank" rel="noopener noreferrer">${escapeHTML(normalizedUrl)}</a>`
-      : (config.url ? escapeHTML(config.url) : '未提供');
+      ? `<div class="cell-url"><a href="${escapeHTML(normalizedUrl)}" target="_blank" rel="noopener noreferrer">${escapeHTML(config.url || normalizedUrl)}</a></div>`
+      : (config.url ? escapeHTML(config.url) : '<span style="color:var(--color-text-muted)">未提供</span>');
     const normalizedLogo = normalizeUrl(config.logo);
     const logoCell = normalizedLogo
-      ? `<img src="${escapeHTML(normalizedLogo)}" alt="${safeName}" style="width:30px;" />`
-      : 'N/A';
-    const descCell = config.desc ? escapeHTML(config.desc) : 'N/A';
-    const catelogCell = escapeHTML(config.catelog || '');
+      ? `<div class="cell-logo"><img src="${escapeHTML(normalizedLogo)}" alt="${safeName}" /></div>`
+      : '<span style="color:var(--color-text-muted)">-</span>';
+    const descCell = config.desc
+      ? `<div class="cell-desc" title="${escapeHTML(config.desc)}">${escapeHTML(config.desc)}</div>`
+      : '<span style="color:var(--color-text-muted)">-</span>';
+    const catelogCell = `<span class="cell-category">${escapeHTML(config.catelog || '未分类')}</span>`;
     row.innerHTML = `
-      <td>${config.id}</td>
-      <td>${safeName}</td>
+      <td class="cell-id">${config.id}</td>
+      <td><strong>${safeName}</strong></td>
       <td>${urlCell}</td>
       <td>${logoCell}</td>
       <td>${descCell}</td>
       <td>${catelogCell}</td>
       <td class="actions">
-        <button class="approve-btn" data-id="${config.id}">批准</button>
-        <button class="reject-btn" data-id="${config.id}">拒绝</button>
+        <button class="approve-btn btn btn-sm" data-id="${config.id}">批准</button>
+        <button class="reject-btn btn btn-sm" data-id="${config.id}">拒绝</button>
       </td>
     `;
     pendingTableBody.appendChild(row);
@@ -552,23 +542,23 @@ function bindPendingActionEvents() {
 }
 
 function handleApprove(id) {
-  if (!confirm('确定批准吗？')) return;
+  if (!confirm('确定批准此投稿吗？')) return;
   fetch(`/api/pending/${id}`, { method: 'PUT' })
     .then(res => res.json())
     .then(data => {
-      if (data.code === 200) { showMessage('批准成功', 'success'); fetchPendingConfigs(); fetchConfigs(); }
-      else { showMessage(data.message, 'error'); }
-    }).catch(() => showMessage('网络错误', 'error'));
+      if (data.code === 200) { showToast('批准成功', 'success'); fetchPendingConfigs(); fetchConfigs(); }
+      else { showToast(data.message, 'error'); }
+    }).catch(() => showToast('网络错误', 'error'));
 }
 
 function handleReject(id) {
-  if (!confirm('确定拒绝吗？')) return;
+  if (!confirm('确定拒绝此投稿吗？')) return;
   fetch(`/api/pending/${id}`, { method: 'DELETE' })
     .then(res => res.json())
     .then(data => {
-      if (data.code === 200) { showMessage('拒绝成功', 'success'); fetchPendingConfigs(); }
-      else { showMessage(data.message, 'error'); }
-    }).catch(() => showMessage('网络错误', 'error'));
+      if (data.code === 200) { showToast('已拒绝', 'success'); fetchPendingConfigs(); }
+      else { showToast(data.message, 'error'); }
+    }).catch(() => showToast('网络错误', 'error'));
 }
 
 function updatePendingPaginationButtons() {

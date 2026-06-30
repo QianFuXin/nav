@@ -1,118 +1,231 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>书签管理页面</title>
+  <title>书签管理 - 书签中心</title>
   <link rel="stylesheet" href="/static/admin.css">
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
+
 <body>
-  <div class="container">
+  <div class="page-wrapper">
+    <div class="container">
+      <!-- Header -->
       <header class="admin-header">
-        <div>
-          <h1>书签管理</h1>
-          <p class="admin-subtitle">管理后台仅限受信任的管理员使用，请妥善保管账号</p>
+        <div class="header-left">
+          <div class="header-icon">🔖</div>
+          <div>
+            <h1>书签管理</h1>
+          </div>
         </div>
-        <form method="post" action="/admin/logout">
-          <button type="submit" class="logout-btn">退出登录</button>
-        </form>
+        <div class="header-right">
+          <a href="/" class="btn btn-secondary btn-sm">返回首页</a>
+          <form method="post" action="/admin/logout" style="display: inline;">
+            <button type="submit" class="logout-btn">退出登录</button>
+          </form>
+        </div>
       </header>
-  
-      <div class="import-export">
-        <input type="file" id="importFile" accept=".json" style="display:none;">
-        <button id="importBtn">导入</button>
-        <button id="exportBtn">导出</button>
-      </div>
-  
-      <div class="add-new">
-        <input type="text" id="addName" placeholder="Name" required>
-        <input type="text" id="addUrl" placeholder="URL" required>
-        <input type="text" id="addLogo" placeholder="Logo(optional)">
-        <input type="text" id="addDesc" placeholder="Description(optional)">
-        <input type="text" id="addCatelog" placeholder="Catelog" required>
-        <input type="number" id="addSortOrder" placeholder="排序 (数字小靠前)">
-        <button id="addBtn">添加</button>
-      </div>
-      <div id="message" style="display: none;padding:1rem;border-radius: 0.5rem;margin-bottom: 1rem;"></div>
-     <div class="tab-wrapper">
-          <div class="tab-buttons">
-             <button class="tab-button active" data-tab="config">书签列表</button>
-             <button class="tab-button" data-tab="pending">待审核列表</button>
-             <button class="tab-button" data-tab="categories">分类排序</button>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <div class="search-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="searchInput" placeholder="搜索书签名称、URL 或分类...">
           </div>
-           <div id="config" class="tab-content active">
-                <div class="table-wrapper">
-                    <table id="configTable">
-                        <thead>
-                            <tr>
-                              <th>ID</th>
-                              <th>Name</th>
-                              <th>URL</th>
-                              <th>Logo</th>
-                              <th>Description</th>
-                              <th>Catelog</th>
-                              <th>排序</th>
-                              <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="configTableBody">
-                        </tbody>
-                    </table>
-                    <div class="pagination">
-                          <button id="prevPage" disabled>上一页</button>
-                          <span id="currentPage">1</span>/<span id="totalPages">1</span>
-                          <button id="nextPage" disabled>下一页</button>
-                    </div>
-               </div>
+        </div>
+        <div class="toolbar-right">
+          <input type="file" id="importFile" accept=".json">
+          <button id="importBtn" class="btn btn-secondary btn-sm">导入</button>
+          <button id="exportBtn" class="btn btn-secondary btn-sm">导出</button>
+        </div>
+      </div>
+
+      <!-- Add New Bookmark Card -->
+      <div class="add-card" id="addCard">
+        <div class="add-card-header" onclick="document.getElementById('addCard').classList.toggle('expanded')">
+          <span class="add-card-title">
+            <span class="icon">✨</span>
+            添加新书签
+          </span>
+          <span class="add-card-toggle">+</span>
+        </div>
+        <div class="add-card-body">
+          <div class="add-form">
+            <div class="form-group">
+              <label for="addName">名称 *</label>
+              <input type="text" id="addName" placeholder="网站名称" required>
             </div>
-           <div id="pending" class="tab-content">
-             <div class="table-wrapper">
-               <table id="pendingTable">
-                  <thead>
-                    <tr>
-                        <th>ID</th>
-                         <th>Name</th>
-                         <th>URL</th>
-                        <th>Logo</th>
-                        <th>Description</th>
-                        <th>Catelog</th>
-                        <th>Actions</th>
-                    </tr>
-                    </thead>
-                    <tbody id="pendingTableBody">
-                    </tbody>
-                </table>
-                 <div class="pagination">
-                  <button id="pendingPrevPage" disabled>上一页</button>
-                   <span id="pendingCurrentPage">1</span>/<span id="pendingTotalPages">1</span>
-                  <button id="pendingNextPage" disabled>下一页</button>
-                </div>
-           </div>
-          </div>
-          <div id="categories" class="tab-content">
-            <div class="table-wrapper">
-              <div class="category-toolbar">
-                <p class="category-hint">设置分类排序值（数字越小越靠前），留空表示使用默认顺序。</p>
-                <button id="refreshCategories" type="button">刷新</button>
-              </div>
-              <table id="categoryTable">
-                <thead>
-                  <tr>
-                    <th>分类</th>
-                    <th>书签数量</th>
-                    <th>排序值</th>
-                    <th>操作</th>
-                  </tr>
-                </thead>
-                <tbody id="categoryTableBody">
-                  <tr><td colspan="4">加载中...</td></tr>
-                </tbody>
-              </table>
+            <div class="form-group">
+              <label for="addUrl">URL *</label>
+              <input type="text" id="addUrl" placeholder="https://example.com" required>
+            </div>
+            <div class="form-group">
+              <label for="addLogo">Logo</label>
+              <input type="text" id="addLogo" placeholder="自动获取或手动输入">
+            </div>
+            <div class="form-group">
+              <label for="addDesc">描述</label>
+              <input type="text" id="addDesc" placeholder="简短描述">
+            </div>
+            <div class="form-group">
+              <label for="addCatelog">分类 *</label>
+              <input type="text" id="addCatelog" placeholder="所属分类">
+            </div>
+            <div class="form-group">
+              <label for="addSortOrder">排序</label>
+              <input type="number" id="addSortOrder" placeholder="数字小靠前">
+            </div>
+            <div class="form-actions">
+              <button id="addBtn" class="btn btn-primary">添加书签</button>
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Toast Container -->
+      <div class="toast-container" id="toastContainer"></div>
+
+      <!-- Main Content Tabs -->
+      <div class="tabs-container">
+        <div class="tab-header">
+          <button class="tab-button active" data-tab="config">书签列表</button>
+          <button class="tab-button" data-tab="pending">待审核列表</button>
+          <button class="tab-button" data-tab="categories">分类排序</button>
+        </div>
+
+        <!-- Bookmarks Tab -->
+        <div id="config" class="tab-content active">
+          <div class="table-wrapper">
+            <table id="configTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>名称</th>
+                  <th>URL</th>
+                  <th>Logo</th>
+                  <th>描述</th>
+                  <th>分类</th>
+                  <th>排序</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="configTableBody">
+              </tbody>
+            </table>
+            <div class="pagination">
+              <button id="prevPage" disabled>上一页</button>
+              <span class="page-info"><span id="currentPage">1</span> / <span id="totalPages">1</span></span>
+              <button id="nextPage" disabled>下一页</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pending Tab -->
+        <div id="pending" class="tab-content">
+          <div class="table-wrapper">
+            <table id="pendingTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>名称</th>
+                  <th>URL</th>
+                  <th>Logo</th>
+                  <th>描述</th>
+                  <th>分类</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="pendingTableBody">
+              </tbody>
+            </table>
+            <div class="pagination">
+              <button id="pendingPrevPage" disabled>上一页</button>
+              <span class="page-info"><span id="pendingCurrentPage">1</span> / <span
+                  id="pendingTotalPages">1</span></span>
+              <button id="pendingNextPage" disabled>下一页</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Categories Tab -->
+        <div id="categories" class="tab-content">
+          <div class="category-toolbar">
+            <p class="category-hint">💡 设置分类排序值（数字越小越靠前），留空表示使用默认顺序</p>
+            <button id="refreshCategories" class="btn btn-secondary btn-sm" type="button">刷新</button>
+          </div>
+          <div class="table-wrapper">
+            <table id="categoryTable">
+              <thead>
+                <tr>
+                  <th>分类名称</th>
+                  <th>书签数量</th>
+                  <th>排序值</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="categoryTableBody">
+                <tr>
+                  <td colspan="4">
+                    <div class="loading-cell">
+                      <div class="loading-spinner"></div>加载中...
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
+
+  <!-- Edit Modal -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>编辑书签</h2>
+        <button class="modal-close" type="button">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="editForm">
+          <input type="hidden" id="editId">
+          <div class="form-group">
+            <label for="editName">名称</label>
+            <input type="text" id="editName" required>
+          </div>
+          <div class="form-group">
+            <label for="editUrl">URL</label>
+            <input type="text" id="editUrl" required>
+          </div>
+          <div class="form-group">
+            <label for="editLogo">Logo</label>
+            <input type="text" id="editLogo">
+          </div>
+          <div class="form-group">
+            <label for="editDesc">描述</label>
+            <input type="text" id="editDesc">
+          </div>
+          <div class="form-group">
+            <label for="editCatelog">分类</label>
+            <input type="text" id="editCatelog" required>
+          </div>
+          <div class="form-group">
+            <label for="editSortOrder">排序</label>
+            <input type="number" id="editSortOrder">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-close-btn">取消</button>
+        <button type="submit" form="editForm" class="btn btn-primary">保存修改</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/static/admin.js"></script>
 </body>
+
 </html>
