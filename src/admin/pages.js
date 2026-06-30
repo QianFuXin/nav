@@ -3,6 +3,7 @@ import adminHtml from '../templates/admin.html';
 import adminCss from '../templates/admin.css';
 import adminJsText from '../templates/admin.js.txt';
 import loginHtml from '../templates/login.html';
+import frontendCss from '../templates/frontend.css';
 
 export function renderAdminPage() {
   return new Response(adminHtml, {
@@ -35,6 +36,7 @@ export function handleStatic(request) {
     'admin.html': { content: adminHtml, type: 'text/html; charset=utf-8' },
     'admin.css': { content: adminCss, type: 'text/css; charset=utf-8' },
     'admin.js': { content: adminJsText, type: 'application/javascript; charset=utf-8' },
+    'frontend.css': { content: frontendCss, type: 'text/css; charset=utf-8' },
   };
 
   const file = files[filePath];
